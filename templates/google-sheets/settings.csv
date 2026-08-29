@@ -1,0 +1,8 @@
+key,value
+MIN_ORDER_VALUE_PAISE,70000
+STANDARD_LEAD_TIME_DAYS,3
+SERVICE_CITY,Bangalore
+DELIVERY_CHARGE_NOTE,Delivery charges are calculated separately.
+RUSH_ORDER_NOTE,Rush orders are subject to availability.
+WHATSAPP_NUMBER,
+BUSINESS_NAME,JoyBundle
