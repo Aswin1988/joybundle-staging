@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { calculateCartSubtotal, isMinimumOrderReached, CART_STORAGE_KEY } from '@/lib/cart';
 import { formatINR, multiplyUnitPrice } from '@/lib/pricing/money';
+import { trackEvent } from '@/lib/analytics';
 
 export default function CartClient({ minimumOrderValuePaise = '70000' }) {
   const [items, setItems] = useState([]);
+  useEffect(() => { if (items.length) trackEvent('cart_view'); }, [items.length]);
   useEffect(() => { const timer = window.setTimeout(() => setItems(JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) || '[]')), 0); return () => window.clearTimeout(timer); }, []);
   function save(next) { setItems(next); window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(next)); }
   const subtotal = calculateCartSubtotal(items);

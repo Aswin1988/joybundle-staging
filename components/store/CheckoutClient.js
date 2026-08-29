@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CART_STORAGE_KEY, calculateCartSubtotal, isMinimumOrderReached } from '@/lib/cart';
 import { formatINR, multiplyUnitPrice } from '@/lib/pricing/money';
+import { trackEvent } from '@/lib/analytics';
 
 const initial = { customer_name: '', customer_phone: '', customer_email: '', delivery_address: '', area: '', pin_code: '', party_date: '', preferred_delivery_date: '' };
 
@@ -15,6 +16,7 @@ export default function CheckoutClient({ minimumOrderValuePaise = '70000', deliv
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   useEffect(() => { const timer = window.setTimeout(() => { try { setItems(JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) || '[]')); } catch { setItems([]); } }, 0); return () => window.clearTimeout(timer); }, []);
+  useEffect(() => { if (items.length) trackEvent('checkout_started'); }, [items.length]);
   const subtotal = calculateCartSubtotal(items);
   const qualifies = isMinimumOrderReached(subtotal, BigInt(minimumOrderValuePaise));
   function update(field, value) { setCustomer((current) => ({ ...current, [field]: value })); }
@@ -28,6 +30,7 @@ export default function CheckoutClient({ minimumOrderValuePaise = '70000', deliv
       const body = await response.json();
       if (!response.ok) { setError(body.error || 'We could not save your order right now. Please try again.'); return; }
       window.sessionStorage.setItem('joybundle-last-order-v1', JSON.stringify(body));
+      trackEvent('order_request_submitted');
       window.localStorage.removeItem(CART_STORAGE_KEY);
       router.push(`/order-confirmation/${encodeURIComponent(body.order_number)}`);
     } catch { setError('We could not reach JoyBundle. Please try again.'); } finally { setSubmitting(false); }

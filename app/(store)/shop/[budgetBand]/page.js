@@ -7,6 +7,13 @@ import { getPublicProducts } from '@/lib/catalog/public';
 
 export const revalidate = 180;
 
+export async function generateMetadata({ params }) {
+  const { budgetBand } = await params;
+  const band = getPriceBand(budgetBand);
+  if (!band) return {};
+  return { title: `${band.label} birthday return gifts | JoyBundle`, description: `Browse JoyBundle birthday return gifts priced ${band.label.toLowerCase()}, with Bangalore delivery and personalization where available.`, alternates: { canonical: `/shop/${budgetBand}` }, openGraph: { title: `${band.label} birthday return gifts | JoyBundle` } };
+}
+
 export default async function BudgetBandPage({ params }) {
   const { budgetBand } = await params;
   const band = getPriceBand(budgetBand);

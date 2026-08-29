@@ -11,7 +11,7 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
-    command: 'yarn dev --hostname 127.0.0.1 --port 4173',
+    command: 'CATALOG_DATA_SOURCE=fixture yarn dev --hostname 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: false,
     timeout: 120000,

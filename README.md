@@ -53,3 +53,32 @@ yarn audit
 ```
 
 `JOYBUNDLE_VALIDATE_ENV=true yarn check:env` requires Google Sheets credentials. The default `false` validates environment syntax without external configuration.
+
+## Launch readiness
+
+Before accepting real orders, review the active Products, prices, public photos
+and alt text, descriptions, contents, bag associations, SEO fields, and the
+WhatsApp setting in Google Sheets. Confirm the minimum order value and delivery
+wording, then complete one synthetic order and Track Order check. Google Sheets
+is the operations interface; the website is the ordering and customer-status
+interface. Do not add customer exports or order data to Git.
+
+Production requires `CATALOG_DATA_SOURCE=google-sheets`,
+`GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, and
+`GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`. Optional analytics uses
+`NEXT_PUBLIC_GA_MEASUREMENT_ID`; it is never hardcoded and no customer or order
+identifiers are sent as event parameters. WhatsApp continues to come from the
+Sheet `Settings` tab.
+
+The expected runtime is Node.js 22.x with Yarn 1.22.x. Build with `yarn build`
+and start with `yarn start`; production normally runs the standalone Next.js
+server behind the existing Nginx reverse proxy and PM2 process. Verify
+`/api/health` after a release. Do not restart unrelated services.
+
+The operator journey is: check new `RECEIVED` orders, confirm availability and
+delivery charge, move the Sheet row to `CONFIRMED`, share the QR code manually,
+mark `PAID` after payment confirmation, then move through `PREPARING`, `READY`,
+`DISPATCHED`, and `DELIVERED`. Cancellation and damage/replacement guidance is
+available at the customer-facing policy pages. Tracking requires order number
+plus the matching mobile number; the lightweight process-local rate limit needs
+distributed hardening before high-volume traffic.

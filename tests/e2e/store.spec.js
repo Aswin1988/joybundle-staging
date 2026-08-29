@@ -92,3 +92,14 @@ test('track order uses a generic error for wrong details', async ({ page }) => {
   await page.getByRole('button', { name: 'Track Order' }).click();
   await expect(page.locator('p[role="alert"]')).toHaveText("We couldn't find an order matching those details.");
 });
+
+test('launch pages are usable on mobile and policies are reachable', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const path of ['/', '/shop/100-149', '/bundles/creative-fun', '/cart', '/checkout', '/track-order', '/delivery-policy', '/cancellation-policy', '/damage-replacement-policy', '/privacy-policy', '/terms']) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'How it works' })).toBeVisible();
+  await expect(page.getByText('No payment required when submitting your order request.')).toBeVisible();
+});

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { formatINR } from '@/lib/pricing/money';
 import { CUSTOMER_TRACKING_STAGES } from '@/lib/orders/customer-status';
+import { trackEvent } from '@/lib/analytics';
 
 export default function TrackOrderClient() {
   const [form, setForm] = useState({ orderNumber: '', phone: '' });
@@ -12,7 +13,8 @@ export default function TrackOrderClient() {
   const [loading, setLoading] = useState(false);
   async function submit(event) {
     event.preventDefault(); setLoading(true); setError(''); setResult(null);
-    try { const response = await fetch('/api/orders/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) }); const body = await response.json(); if (!response.ok) { setError(body.error || "We couldn't find an order matching those details."); return; } setResult(body); } catch { setError('We could not check that order right now. Please try again.'); } finally { setLoading(false); }
+    trackEvent('track_order_started');
+    try { const response = await fetch('/api/orders/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) }); const body = await response.json(); if (!response.ok) { trackEvent('track_order_failed'); setError(body.error || "We couldn't find an order matching those details."); return; } trackEvent('track_order_success'); setResult(body); } catch { trackEvent('track_order_failed'); setError('We could not check that order right now. Please try again.'); } finally { setLoading(false); }
   }
   return <main className="min-h-screen bg-cream"><div className="mx-auto max-w-3xl px-5 py-6 sm:px-8"><header className="flex items-center justify-between"><Link href="/" className="text-xl font-bold">Joy<span className="text-berry">Bundle</span></Link><Link href="/shop/under-100" className="text-sm font-bold text-berry">Shop bundles</Link></header><div className="py-12"><p className="text-sm font-bold uppercase tracking-[0.18em] text-berry">Track order</p><h1 className="mt-3 text-4xl font-bold">Track your JoyBundle order</h1><p className="mt-4 text-ink/65">Use the mobile number you provided when placing the order.</p><form onSubmit={submit} className="mt-8 space-y-4 rounded-2xl border border-ink/10 bg-white p-5"><label className="block text-sm font-semibold">Order number<input required placeholder="JB-XXXXXXXX-XXXX" value={form.orderNumber} onChange={(event) => setForm({ ...form, orderNumber: event.target.value })} className="mt-2 h-12 w-full rounded-xl border border-ink/20 px-3 uppercase" /></label><label className="block text-sm font-semibold">Mobile number<input required inputMode="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="mt-2 h-12 w-full rounded-xl border border-ink/20 px-3" /></label>{error ? <p role="alert" className="rounded-xl bg-peach/50 p-3 text-sm font-semibold text-berry">{error}</p> : null}<button disabled={loading} className="min-h-12 w-full rounded-full bg-ink px-5 text-sm font-bold text-white disabled:opacity-40">{loading ? 'Checking…' : 'Track Order'}</button></form>{result ? <TrackingResult result={result} /> : null}</div></div></main>;
 }

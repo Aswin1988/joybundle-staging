@@ -1,0 +1,4 @@
+import PolicyPage from '@/components/store/PolicyPage';
+
+export const metadata = { title: 'Cancellation policy | JoyBundle', description: 'JoyBundle cancellation information for order requests.', alternates: { canonical: '/cancellation-policy' } };
+export default function CancellationPolicy() { return <PolicyPage eyebrow="Orders" title="Cancellation policy" intro="We understand that plans can change. Please contact JoyBundle promptly if you need to cancel." sections={[{ heading: 'When cancellation may be possible', paragraphs: ['Cancellation is generally possible before preparation or customization begins. Contact us through WhatsApp so we can check the current order status.'] }, { heading: 'After preparation begins', paragraphs: ['Once customized work or preparation has begun, cancellation may not be possible. We will explain the available options based on the order stage and circumstances, subject to applicable law.'] }]} />; }

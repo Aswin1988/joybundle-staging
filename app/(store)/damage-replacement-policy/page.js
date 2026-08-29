@@ -1,0 +1,4 @@
+import PolicyPage from '@/components/store/PolicyPage';
+
+export const metadata = { title: 'Damage and replacement policy | JoyBundle', description: 'What to do if a JoyBundle order arrives damaged.', alternates: { canonical: '/damage-replacement-policy' } };
+export default function DamageReplacementPolicy() { return <PolicyPage eyebrow="Support" title="Damage & replacement" intro="We want your gifts to arrive ready for a happy celebration." sections={[{ heading: 'If something arrives damaged', paragraphs: ['Please contact JoyBundle promptly through WhatsApp and share your order number. We may request reasonable photo evidence so we can understand the issue.'] }, { heading: 'Resolution', paragraphs: ['Depending on the circumstances and availability, we may arrange a replacement, refund, or another reasonable resolution. We will discuss the practical next step with you.'] }]} />; }

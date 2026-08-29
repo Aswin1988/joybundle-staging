@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { formatINR, multiplyUnitPrice } from '@/lib/pricing/money';
 import { isMinimumOrderReached, validatePersonalization } from '@/lib/cart';
+import { trackEvent } from '@/lib/analytics';
 
 export default function BundleConfigurator({ product, minimumOrderValuePaise = '70000' }) {
   const minimum = BigInt(minimumOrderValuePaise);
@@ -21,6 +22,7 @@ export default function BundleConfigurator({ product, minimumOrderValuePaise = '
     const item = { product_code: product.product_code, slug: product.slug, name: product.name, unit_price_paise: product.price_paise, quantity, selected_bag_option: bag, personalization: product.personalization_enabled ? personalization : null };
     const existing = JSON.parse(window.localStorage.getItem('joybundle-cart-v1') || '[]');
     window.localStorage.setItem('joybundle-cart-v1', JSON.stringify([...existing, item]));
+    trackEvent('add_to_cart');
     setNotice('Added to your cart.');
   }
 
