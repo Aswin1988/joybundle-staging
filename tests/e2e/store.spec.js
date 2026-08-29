@@ -64,10 +64,31 @@ test('checkout submits a reviewed cart and shows confirmation', async ({ page })
   await page.getByLabel('Area').fill('Indiranagar');
   await page.getByLabel('PIN code').fill('560038');
   await page.getByLabel('Party date').fill('2099-01-01');
-  await page.getByRole('button', { name: 'Submit order request' }).click();
+  await page.getByRole('button', { name: 'Send Order Request' }).click();
   await expect(page.getByText('JB-TEST-1234')).toBeVisible();
   await expect(page.getByText('Payment status: Pending')).toBeVisible();
-  await expect(page.getByText('You can continue on WhatsApp to complete the confirmation.')).toBeVisible();
+  await expect(page.getByText("We'll confirm delivery charges and the final amount with you on WhatsApp.")).toBeVisible();
   const whatsapp = page.getByRole('link', { name: 'Continue on WhatsApp' });
   if (await whatsapp.count()) expect(await whatsapp.getAttribute('href')).toMatch(/^https:\/\/wa\.me\//);
+});
+
+test('track order verifies a phone and shows safe progress', async ({ page }) => {
+  await page.route('/api/orders/track', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ order_number: 'JB-TRACK-1234', status: 'PREPARING', status_title: "We're preparing your gifts", status_description: 'Your JoyBundle gifts are being prepared and personalized.', status_stage: 4, payment_waiting: false, cancelled: false, party_date: '2099-01-01', total_paise: '74500', payment_status: 'PAID', items: [{ name: 'Creative Fun Bundle', quantity: 5 }], whatsapp_url: '' }) }));
+  await page.goto('/track-order');
+  await page.getByLabel('Order number').fill('JB-TRACK-1234');
+  await page.getByLabel('Mobile number').fill('9876543210');
+  await page.getByRole('button', { name: 'Track Order' }).click();
+  await expect(page.getByText("We're preparing your gifts")).toBeVisible();
+  await expect(page.getByText('Preparing', { exact: true })).toBeVisible();
+  await expect(page.getByText('Creative Fun Bundle × 5')).toBeVisible();
+  expect(await page.locator('body').innerText()).not.toContain('9876543210');
+});
+
+test('track order uses a generic error for wrong details', async ({ page }) => {
+  await page.route('/api/orders/track', async (route) => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: "We couldn't find an order matching those details." }) }));
+  await page.goto('/track-order');
+  await page.getByLabel('Order number').fill('JB-WRONG-1234');
+  await page.getByLabel('Mobile number').fill('9876543210');
+  await page.getByRole('button', { name: 'Track Order' }).click();
+  await expect(page.locator('p[role="alert"]')).toHaveText("We couldn't find an order matching those details.");
 });

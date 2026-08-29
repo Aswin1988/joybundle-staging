@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { createOrder } from '../../lib/orders/service.js';
 import { withIdempotency } from '../../lib/orders/idempotency.js';
 import { ORDER_STATUSES, ORDER_STATUS_TRANSITIONS, validateOrderStatus } from '../../lib/orders/status.js';
-import { buildWhatsAppMessage, normalizeWhatsAppNumber } from '../../lib/orders/whatsapp.js';
-import { findPublicOrderByNumber, serializePublicOrder } from '../../lib/orders/public.js';
+import { buildWhatsAppMessage, buildWhatsAppSupportMessage, normalizeWhatsAppNumber } from '../../lib/orders/whatsapp.js';
+import { findPublicOrderByNumber, findTrackableOrder, serializePublicOrder, serializePublicTrackingOrder } from '../../lib/orders/public.js';
+import { CUSTOMER_TRACKING_STAGES, getCustomerOrderStatus, getCustomerPaymentStatus } from '../../lib/orders/customer-status.js';
 
 const product = { product_code: 'JB-CF-149', slug: 'creative-fun', name: 'Creative Fun Bundle', price_paise: '14900', personalization_enabled: true, bag_options: [{ bag_code: 'BLUE', name: 'Blue' }] };
 const customer = { customer_name: 'Riya', customer_phone: '9876543210', customer_email: '', delivery_address: '1 Main Road', area: 'Indiranagar', pin_code: '560038', party_date: '2099-01-01', preferred_delivery_date: '' };
@@ -67,4 +68,45 @@ test('order lookup returns only public-safe fields', async () => {
   assert.equal('delivery_address' in result, false);
   assert.equal('order_id' in result, false);
   assert.equal(serializePublicOrder({ order_number: 'JB-1', status: 'INVALID' }), null);
+});
+
+test('maps every operational status to a customer-safe status', () => {
+  assert.deepEqual(CUSTOMER_TRACKING_STAGES, ['Order Received', 'Order Confirmed', 'Payment Received', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered']);
+  const expected = {
+    RECEIVED: ['Order request received', "We've received your order request and will check availability shortly."],
+    CONFIRMED: ['Order confirmed', 'Your order details have been confirmed.'],
+    AWAITING_PAYMENT: ['Waiting for payment', "We've confirmed your final amount. Complete payment using the QR code shared with you."],
+    PAID: ['Payment received', 'Your payment has been received.'],
+    PREPARING: ["We're preparing your gifts", 'Your JoyBundle gifts are being prepared and personalized.'],
+    READY: ['Your gifts are ready', 'Your order has been packed and is ready for delivery.'],
+    DISPATCHED: ['Out for delivery', 'Your JoyBundle order is on the way.'],
+    DELIVERED: ['Delivered', 'Your JoyBundle order has been delivered.'],
+    CANCELLED: ['Order cancelled', 'This order has been cancelled.'],
+  };
+  for (const status of ORDER_STATUSES) assert.deepEqual([getCustomerOrderStatus(status).title, getCustomerOrderStatus(status).description], expected[status]);
+  assert.equal(getCustomerOrderStatus(' preparing ').status, 'PREPARING');
+  assert.equal(getCustomerOrderStatus('UNKNOWN'), null);
+  assert.equal(getCustomerPaymentStatus('paid'), 'PAID');
+  assert.equal(getCustomerPaymentStatus('settled'), 'PENDING');
+  const tracking = serializePublicTrackingOrder({ order_number: 'JB-TEST-ABCD', status: 'AWAITING_PAYMENT', created_at: '2026-08-29', party_date: '2099-01-01', subtotal_paise: '74500', total_paise: '74500', payment_status: 'PENDING', customer_phone: 'secret' }, [{ name: 'Bundle', quantity: '5', customer_phone: 'secret' }]);
+  assert.equal(tracking.payment_waiting, true);
+  assert.equal('customer_phone' in tracking, false);
+  for (const field of ['customer_email', 'delivery_address', 'area', 'pin_code', 'personalization_name', 'personalization_age', 'personalization_message', 'order_id', 'notes', 'spreadsheet_id']) assert.equal(field in tracking, false);
+});
+
+test('tracks only when both order number and normalized phone match', async () => {
+  const reader = async (tab) => tab === 'Orders' ? [['order_number', 'status', 'customer_phone', 'created_at', 'party_date', 'subtotal_paise', 'delivery_charge_paise', 'total_paise', 'payment_status'], ['JB-TEST-TRACK', 'PREPARING', '+91 98765 43210', '2026-08-29', '2099-01-01', '74500', '0', '74500', 'PENDING']] : [['order_number', 'name', 'quantity'], ['JB-TEST-TRACK', 'Bundle', '5']];
+  const result = await findTrackableOrder('JB-TEST-TRACK', '9876543210', reader, '9876543210');
+  assert.equal(result.status_title, "We're preparing your gifts");
+  assert.equal(result.items[0].quantity, 5);
+  assert.equal(await findTrackableOrder('JB-TEST-TRACK', '9876543211', reader), null);
+  assert.equal(await findTrackableOrder('JB-WRONG', '9876543210', reader), null);
+});
+
+test('builds minimal WhatsApp support handoff', () => {
+  const handoff = buildWhatsAppSupportMessage({ whatsappNumber: '9876543210', orderNumber: 'JB-TEST-TRACK' });
+  assert.match(handoff.url, /^https:\/\/wa\.me\/919876543210\?text=/);
+  assert.match(handoff.message, /JB-TEST-TRACK/);
+  assert.doesNotMatch(handoff.message, /address|phone|personalization|payment|notes/i);
+  assert.equal(buildWhatsAppSupportMessage({ whatsappNumber: '', orderNumber: 'JB-TEST-TRACK' }), null);
 });
