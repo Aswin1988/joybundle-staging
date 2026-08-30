@@ -12,6 +12,40 @@ test('homepage has no horizontal overflow at 360px', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test('homepage keeps the JoyBundle design system loaded', async ({ page }) => {
+  await page.goto('/');
+
+  const styles = await page.evaluate(() => {
+    const c = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const computed = getComputedStyle(element);
+      return {
+        backgroundColor: computed.backgroundColor,
+        borderRadius: computed.borderRadius,
+        display: computed.display,
+        fontFamily: computed.fontFamily,
+      };
+    };
+
+    return {
+      body: c('body'),
+      hero: c('h1'),
+      cta: c('a[href="#shop"]'),
+      card: c('a[href="/bundles/creative-fun"]'),
+    };
+  });
+
+  expect(styles.body.backgroundColor).toBe('rgb(255, 250, 243)');
+  expect(styles.body.fontFamily).toContain('Trebuchet MS');
+  expect(styles.hero.fontFamily).toContain('Trebuchet MS');
+  expect(styles.cta.display).toMatch(/flex/);
+  expect(styles.cta.backgroundColor).toBe('rgb(46, 41, 37)');
+  expect(styles.cta.borderRadius).not.toBe('0px');
+  expect(styles.card.backgroundColor).toBe('rgb(255, 255, 255)');
+  expect(styles.card.borderRadius).not.toBe('0px');
+});
+
 test('budget page renders active catalog and strips private fields', async ({ page }) => {
   await page.goto('/shop/100-149');
   await expect(page.getByRole('heading', { name: '₹100–₹149 return gifts' })).toBeVisible();
